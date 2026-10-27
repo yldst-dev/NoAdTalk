@@ -2,6 +2,17 @@
 
 카카오톡 Mac 기본 창의 하단 광고와 광고 공간을 숨깁니다. 친구, 채팅, 더보기 화면이 대상입니다. 실행 파일을 바꾸거나 재서명하지 않고 `FSMainViewController.nib`의 광고 연결과 높이 제약만 수정합니다.
 
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top"><img src="docs/images/before.png" alt="적용 전: 카카오톡 하단에 광고가 표시된 화면" width="100%"></td>
+    <td width="50%" align="center" valign="top"><img src="docs/images/after.png" alt="적용 후: 하단 광고와 광고 공간이 사라진 화면" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Before</strong></td>
+    <td align="center"><strong>After</strong></td>
+  </tr>
+</table>
+
 ## 시작하기
 
 1. [최신 릴리즈](https://github.com/yldst-dev/NoAdTalk/releases/latest)에서 `NoAdTalk.zip`을 내려받아 압축을 풉니다.
