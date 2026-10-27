@@ -30,6 +30,14 @@ class ManageTests(unittest.TestCase):
         with patch('manage.subprocess.run', side_effect=[Mock(returncode=0), Mock(returncode=1)]):
             self.assertEqual(status(), '광고 숨김: 적용 가능\n자동 감지: 꺼짐')
 
+    def test_app_management_denial_opens_settings_without_changing_automation(self):
+        for action in ('setup', 'apply', 'restore'):
+            with self.subTest(action=action), patch('manage.subprocess.run', side_effect=[subprocess.CalledProcessError(77, 'patch'), Mock(returncode=0)]) as run, patch('manage.configure') as configure:
+                with self.assertRaisesRegex(ValueError, '앱 관리'):
+                    run_action(action)
+                self.assertEqual(run.call_args.args[0], ['/usr/bin/open', 'x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles'])
+                configure.assert_not_called()
+
     def test_cancel_does_not_change_anything(self):
         with patch.object(sys, 'argv', ['manage.py']), patch('manage.status', return_value='상태'), patch('manage.subprocess.run', return_value=Mock(stdout='\n')), patch('manage.run_action') as action:
             main()

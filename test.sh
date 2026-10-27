@@ -57,6 +57,24 @@ fixture="$test_dir/KakaoTalk.app"
 cp -cR "$app" "$fixture"
 cp "$original" "$fixture/Contents/Resources/FSMainViewController.nib"
 /usr/bin/codesign --verify --strict --deep "$fixture"
+for denied_action in apply restore; do
+    if [[ "$denied_action" == restore ]]; then cp "$test_dir/patched.nib" "$fixture/Contents/Resources/FSMainViewController.nib"; fi
+    mkdir -p "$test_dir/denied-backup"
+    cp "$original" "$test_dir/denied-backup/FSMainViewController.nib"
+    before_denial="$(digest "$fixture/Contents/Resources/FSMainViewController.nib")"
+    if (
+        find_app() { printf '%s\n' "$fixture"; }
+        backup_root() { printf '%s\n' "$test_dir/denied-backup"; }
+        privileged() { printf 'mktemp: Operation not permitted\n' >&2; return 1; }
+        kakao_running() { touch "$test_dir/unexpected-running-check"; return 1; }
+        quit_app() { touch "$test_dir/unexpected-quit"; }
+        main "$denied_action"
+    ) 2>"$test_dir/permission.log"; then exit 1; else [[ "$?" == 77 ]]; fi
+    [[ ! -e "$test_dir/unexpected-running-check" && ! -e "$test_dir/unexpected-quit" ]]
+    [[ "$(digest "$fixture/Contents/Resources/FSMainViewController.nib")" == "$before_denial" ]]
+    /usr/bin/grep -q '앱 관리' "$test_dir/permission.log"
+done
+cp "$original" "$fixture/Contents/Resources/FSMainViewController.nib"
 (
     find_app() { printf '%s\n' "$fixture"; }
     backup_root() { printf '%s\n' "$test_dir/backup"; }

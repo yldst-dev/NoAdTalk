@@ -28,6 +28,19 @@ remove_stage() {
     privileged /bin/rm -f "$1" || { printf '임시 파일을 지우지 못했습니다: %s\n' "$1" >&2; return 1; }
 }
 
+check_write_access() {
+    local probe
+    if ! probe="$(LC_ALL=C privileged /usr/bin/mktemp "$(dirname "$1")/.no-ad-talk.XXXXXXXX" 2>"$temporary_dir/write-error")"; then
+        cat "$temporary_dir/write-error" >&2
+        if /usr/bin/grep -q 'Operation not permitted' "$temporary_dir/write-error"; then
+            printf 'macOS가 앱 변경을 차단했습니다. 시스템 설정 → 개인정보 보호 및 보안 → 앱 관리에서 실행 중인 터미널 앱을 허용한 뒤 다시 실행해 주세요.\n' >&2
+            return 77
+        fi
+        return 1
+    fi
+    remove_stage "$probe"
+}
+
 replace_nib() {
     local input="$1" destination="$2" expected_current="$3" expected_new="$4"
     local directory stage mode owner staged_sha
@@ -194,13 +207,14 @@ main() {
         [[ -f "$backup" && ! -L "$backup" && "$(digest "$backup")" == "$original_sha" ]] || return 1
     fi
     if [[ "$action" == restore ]]; then new_file="$backup"; fi
-    if kakao_running; then
-        /usr/bin/osascript -e 'display dialog "카카오톡을 종료하고 다시 열어야 합니다. 저장하지 않은 내용이 있다면 먼저 저장해 주세요." buttons {"취소", "계속"} default button "계속" cancel button "취소"' >/dev/null || return 1
-    fi
     if [[ ! -w "$nib" || ! -w "$(dirname "$nib")" ]]; then
         printf '변경을 위해 macOS 관리자 암호가 필요합니다. 암호는 화면에 표시되지 않습니다.\n'
         /usr/bin/sudo -v || return 1
         use_sudo=1
+    fi
+    check_write_access "$nib" || return $?
+    if kakao_running; then
+        /usr/bin/osascript -e 'display dialog "카카오톡을 종료하고 다시 열어야 합니다. 저장하지 않은 내용이 있다면 먼저 저장해 주세요." buttons {"취소", "계속"} default button "계속" cancel button "취소"' >/dev/null || return 1
     fi
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_info")" == "$version" && "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app_info")" == "$build" ]] || { printf '작업 중 앱 버전이 바뀌어 중단했습니다.\n' >&2; return 1; }
     quit_app || { printf '카카오톡을 종료하지 못해 변경하지 않았습니다.\n' >&2; return 1; }

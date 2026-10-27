@@ -32,7 +32,13 @@ def status():
 
 def run_action(action):
     if action in ('setup', 'apply', 'restore'):
-        subprocess.run(['/bin/bash', str(SCRIPTS / 'patch.sh'), 'restore' if action == 'restore' else 'apply'], check=True)
+        try:
+            subprocess.run(['/bin/bash', str(SCRIPTS / 'patch.sh'), 'restore' if action == 'restore' else 'apply'], check=True)
+        except subprocess.CalledProcessError as error:
+            if error.returncode != 77:
+                raise
+            subprocess.run(['/usr/bin/open', 'x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles'], check=False)
+            raise ValueError('macOS가 앱 변경을 차단했습니다. 시스템 설정 → 개인정보 보호 및 보안 → 앱 관리에서 실행 중인 터미널 앱을 허용해 주세요. 터미널을 다시 열라는 안내가 나오면 진행한 뒤 같은 작업을 다시 실행해 주세요. 카카오톡은 종료하거나 변경하지 않았습니다.') from error
     if action in ('setup', 'enable'):
         configure('install')
     elif action in ('restore', 'disable'):
