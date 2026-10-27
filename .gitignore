@@ -1,0 +1,5 @@
+.DS_Store
+/dist/
+/NoAdTalk.zip
+__pycache__/
+*.pyc
